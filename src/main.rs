@@ -1,5 +1,7 @@
 use std::fs;
 use std::env;
+use anyhow::{anyhow, Result};
+
 type NodeId = usize;
 
 #[derive(Debug)]
@@ -33,13 +35,45 @@ impl Graph {
         }
         return graph;
     }
+    fn process_edge(&mut self, start: NodeId, end: NodeId) {
+        // Point from lesser -> greater
+        if start > end {
+            let idx = self.adjs[start]
+                .iter()
+                .position(|&f| f == end)
+                .unwrap();
+
+            self.adjs[start].remove(idx);
+        } else {
+            let idx = self.adjs[end]
+                .iter()
+                .position(|&f| f == start)
+                .unwrap();
+
+            self.adjs[end].remove(idx);
+        }
+    }
     pub fn to_dag(&mut self) {
-        unimplemented!();
+        for (i, node) in self.adjs.clone().iter().enumerate(){
+            for connection in node {
+                if *connection < i {
+                    continue //we have already done 0->1 so 1->0 will not be there
+                }
+                self.process_edge(i, *connection);
+            }
+        }
     }
 }
 
-fn main() {
+fn main() -> Result<()> {
     let args: Vec<String> = env::args().collect();
+    if args.len() < 2 {
+        eprintln!("[Usage] ./demo_graph_solver[.exe] {{FILE_PATH}}");
+        return Err(anyhow!("invalid use"));
+    }
     let mut graph = Graph::from_file(args[1].as_str());
-    println!("{:#?}", graph);
+    graph.to_dag();
+    println!("{:#?}", graph.adjs);
+
+    return Ok(());
 }
